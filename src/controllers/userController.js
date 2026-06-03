@@ -24,7 +24,7 @@ const uploadProfilePhoto = async (req, res) => {
 
     // Construct the public retrieval URL for this photo
     const host = req.get('host');
-    const protocol = req.protocol;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     // Add timestamp to prevent browser cache issues on the client side
     const photoUrl = `${protocol}://${host}/api/users/profile-photo/${uid}?t=${Date.now()}`;
 
@@ -52,6 +52,8 @@ const getProfilePhoto = async (req, res) => {
 
     // Set correct headers and send the raw image buffer
     res.set('Content-Type', user.photoMimeType || 'image/jpeg');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(user.photoBuffer);
   } catch (error) {
     res.status(500).json({ message: error.message });
