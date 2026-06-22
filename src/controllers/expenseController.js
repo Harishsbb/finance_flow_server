@@ -24,12 +24,27 @@ const saveExpense = async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields (id, amount, category, dateTime, accountId, isIncome)' });
     }
 
-    // Verify bank account exists for this user
-    const accountExists = await BankAccount.findOne({ id: accountId, userId: req.user.uid });
-    if (!accountExists) {
-      return res.status(404).json({ message: `Associated Bank Account with ID ${accountId} not found` });
+    // 1. Revert previous balance impact if this is an update
+    const oldExpense = await Expense.findOne({ id, userId: req.user.uid });
+    if (oldExpense) {
+      const oldAccount = await BankAccount.findOne({ id: oldExpense.accountId, userId: req.user.uid });
+      if (oldAccount) {
+        const revertAdjustment = oldExpense.isIncome ? -oldExpense.amount : oldExpense.amount;
+        oldAccount.balance += revertAdjustment;
+        await oldAccount.save();
+      }
     }
 
+    // 2. Apply new balance impact
+    const newAccount = await BankAccount.findOne({ id: accountId, userId: req.user.uid });
+    if (!newAccount) {
+      return res.status(404).json({ message: `Associated Bank Account with ID ${accountId} not found` });
+    }
+    const applyAdjustment = isIncome ? amount : -amount;
+    newAccount.balance += applyAdjustment;
+    await newAccount.save();
+
+    // 3. Save/Update the expense
     const expense = await Expense.findOneAndUpdate(
       { id, userId: req.user.uid },
       { id, amount, category, dateTime, accountId, note, isIncome, userId: req.user.uid },
