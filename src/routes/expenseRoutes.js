@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getExpenses, saveExpense, deleteExpense } = require('../controllers/expenseController');
+const { getExpenses, saveExpense, deleteExpense, exportExpenses } = require('../controllers/expenseController');
 const { protect } = require('../middleware/auth');
+
+router.route('/export')
+  .get(protect, exportExpenses);
 
 router.route('/')
   .get(protect, getExpenses)
